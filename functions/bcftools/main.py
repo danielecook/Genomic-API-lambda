@@ -5,39 +5,34 @@ Lambda example with external dependency
 import logging
 from subprocess import Popen, PIPE
 import json
+import re
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-def return_msg(out, err, status = 200):
+def msg(out, err, event, status = 200):
     return {
                 'statusCode': status,
-                'body': json.dumps({"out": out, "err": err}),
+                'body': {"out": out, "err": err, "event": event},
                 'headers': {
                     'Content-Type': 'application/json',
                 }
             }
 
-
 def handle(event, context):
-    logger.info("%s ------ %s", event, context)
-    if 'body' not in event:
-        return return_msg(None, "Error: must specify VCF and region", 400)
-    body = event['body']
-    if 'region' and 'vcf' not in body:
-        return return_msg(None, "Error: must specify VCF and region", 400)
+    if 'region' not in event or 'vcf' not in event:
+        return msg(None, "Error: must specify VCF and region", event, 400)
 
-    data = json.loads(body)
+    m = re.match("^([0-9A-Za-z]+):([0-9]+)-([0-9]+)$", event['region'])
+    
+    if not m:
+        return msg(None, "Invalid region", 400)
 
-    #need regex to check if region is valid
-    region = data['region']
-    start = region.split(":")[1].split("-")[0]
-    end = region.split(':')[1].split("-")[1]
-    if !(start-end < 999999 and start-end > 0):
-        return return_msg(None, "Invalid start and end region values", 400)
-
-
-
+    chrom = m.group(1)
+    start = int(m.group(2))
+    end = int(m.group(3))
+    #if !(start-end < 1e6 and start .group(3))- end > 0):
+    #    return msg(None, "Invalid start and end region values", 400)
 
     
     logger.info("%s", event['body'])
@@ -45,4 +40,4 @@ def handle(event, context):
     logger.info(out + " out")
     logger.info(err + " err")
 
-    return return_msg(out, err, 200)
+    return msg(out, err, 200)
