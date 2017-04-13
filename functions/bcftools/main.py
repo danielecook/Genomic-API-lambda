@@ -45,7 +45,6 @@ def handle(event, context):
         if 'body' in event:
             event = json.loads(event['body'])
         logger.info(event)
-        # return msg(os.getcwd(), glob.glob("/*"), event, 200)
         if 'region' not in event or 'vcf' not in event:
             return msg(None, "Must specify vcf and region", event, 400)
 
