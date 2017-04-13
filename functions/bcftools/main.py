@@ -5,6 +5,9 @@ Lambda example with external dependency
 import logging
 from subprocess import Popen, PIPE
 import re
+import json
+import os
+import traceback
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -25,7 +28,7 @@ def msg(out, err, event, status=200):
         out = None
     if err == "":
         err = None
-    if err.startswith("[E::hts_open]"):
+    if type(err) == str and err.startswith("[E::hts_open]"):
         err = err.strip()
     return {
         'statusCode': status,
@@ -37,19 +40,28 @@ def msg(out, err, event, status=200):
 
 
 def handle(event, context):
-    if 'region' not in event or 'vcf' not in event:
-        return msg(None, "Must specify vcf and region", event, 400)
+    try:
+        os.chdir("/tmp")
+        if 'body' in event:
+            event = json.loads(event['body'])
+        logger.info(event)
+        # return msg(os.getcwd(), glob.glob("/*"), event, 200)
+        if 'region' not in event or 'vcf' not in event:
+            return msg(None, "Must specify vcf and region", event, 400)
 
-    chrom, start, end = get_region(event['region'])
-    event['vcf'] = event['vcf'].replace("https://", "http://")
+        chrom, start, end = get_region(event['region'])
+        event['vcf'] = event['vcf'].replace("https://", "http://")
 
-    if start >= end:
-        return msg(None, "Invalid start and end region values", event, 400)
-    if end - start > 1e6:
-        return msg(None, "Maximum region size is 100 kb", event, 400)
+        if start >= end:
+            return msg(None, "Invalid start and end region values", event, 400)
+        if end - start > 1e6:
+            return msg(None, "Maximum region size is 100 kb", event, 400)
 
-    out, err = Popen(["./bcftools", "view", event["vcf"]], stdout=PIPE, stderr=PIPE).communicate()
-    logger.info(out + " out")
-    logger.info(err + " err")
-
-    return msg(out, err, 200)
+        comm = ["/var/task/bcftools", "view", event["vcf"], event['region']]
+        logger.info(' '.join(comm))
+        out, err = Popen(comm, stdout=PIPE, stderr=PIPE).communicate()
+        logger.info(out + " out")
+        logger.info(err + " err")
+        return msg(out, err, 200)
+    except Exception as e:
+        return msg(None, e, event, 400)
