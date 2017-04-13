@@ -1,0 +1,5 @@
+{
+  "name": "genomics-api",
+  "description": "Genomics API Using Lambda",
+  "role": "arn:aws:iam::497013225958:role/bio-lambda"
+}
