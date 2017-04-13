@@ -24,8 +24,20 @@ def handle(event, context):
     if 'body' not in event:
         return return_msg(None, "Error: must specify VCF and region", 400)
     body = event['body']
-    if 'vcf' not in body:
+    if 'region' and 'vcf' not in body:
         return return_msg(None, "Error: must specify VCF and region", 400)
+
+    data = json.loads(body)
+
+    #need regex to check if region is valid
+    region = data['region']
+    start = region.split(":")[1].split("-")[0]
+    end = region.split(':')[1].split("-")[1]
+    if !(start-end < 999999 and start-end > 0):
+        return return_msg(None, "Invalid start and end region values", 400)
+
+
+
 
     
     logger.info("%s", event['body'])
